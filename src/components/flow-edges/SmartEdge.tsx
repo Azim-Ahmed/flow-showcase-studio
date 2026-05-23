@@ -7,19 +7,13 @@ import {
 } from "./smartRouter";
 
 function exitPoint(x: number, y: number, pos?: Position): Point {
-  // small extension out of the node so the path leaves cleanly
   const off = 14;
   switch (pos) {
-    case Position.Left:
-      return { x: x - off, y };
-    case Position.Right:
-      return { x: x + off, y };
-    case Position.Top:
-      return { x, y: y - off };
-    case Position.Bottom:
-      return { x, y: y + off };
-    default:
-      return { x: x + off, y };
+    case Position.Left:   return { x: x - off, y };
+    case Position.Right:  return { x: x + off, y };
+    case Position.Top:    return { x, y: y - off };
+    case Position.Bottom: return { x, y: y + off };
+    default:              return { x: x + off, y };
   }
 }
 
@@ -36,9 +30,9 @@ export function SmartEdge({
   selected,
   style,
 }: EdgeProps) {
-  const obstacles = useStore((s) => {
+  const obstacles = useStore((store) => {
     const out: Rect[] = [];
-    s.nodeInternals.forEach((n) => {
+    store.nodeInternals.forEach((n) => {
       if (n.id === source || n.id === target) return;
       const w = n.width ?? 180;
       const h = n.height ?? 60;
@@ -64,22 +58,47 @@ export function SmartEdge({
   const d = polylineToRoundedPath(full, 10);
 
   const stroke = (style as React.CSSProperties)?.stroke ?? "var(--accent)";
-  const strokeWidth = (style as React.CSSProperties)?.strokeWidth ?? 1.75;
+  const strokeWidth = Number((style as React.CSSProperties)?.strokeWidth ?? 1.75);
+  const w = strokeWidth + (selected ? 0.75 : 0);
 
   return (
     <>
+      {/* soft glow underlay */}
       <path
         d={d}
         fill="none"
         stroke={stroke as string}
-        strokeWidth={Number(strokeWidth) + (selected ? 0.75 : 0)}
-        strokeDasharray="6 5"
+        strokeWidth={w + 4}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={selected ? 1 : 0.85}
+        opacity={selected ? 0.35 : 0.12}
+        style={{ filter: "blur(3px)" }}
+      />
+      {/* solid path */}
+      <path
+        d={d}
+        fill="none"
+        stroke={stroke as string}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        opacity={selected ? 1 : 0.9}
         className="react-flow__edge-path"
       />
-      <path d={d} fill="none" stroke="transparent" strokeWidth={16} />
+      {/* animated dash overlay for life */}
+      <path
+        d={d}
+        fill="none"
+        stroke={stroke as string}
+        strokeWidth={w}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeDasharray="2 10"
+        opacity={selected ? 0.9 : 0.55}
+        className="edge-animated"
+      />
+      {/* fat invisible hit target */}
+      <path d={d} fill="none" stroke="transparent" strokeWidth={20} />
     </>
   );
 }

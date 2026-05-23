@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useRef, useState, DragEvent } from "react";
+import { useCallback, useEffect, useRef, useState, DragEvent } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -12,6 +12,8 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   Connection,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from "reactflow";
 import { ExampleLayout } from "@/components/ExampleLayout";
 import { FlowNode, FlowNodeData } from "@/components/flow-nodes/FlowNode";
@@ -92,6 +94,30 @@ function Inner() {
     [rf, setNodes]
   );
 
+  // Delete-key removes selected nodes/edges
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      setNodes((nds) => applyNodeChanges(
+        nds.filter((n) => n.selected).map((n) => ({ id: n.id, type: "remove" as const })),
+        nds,
+      ));
+      setEdges((eds) => applyEdgeChanges(
+        eds.filter((e) => e.selected).map((e) => ({ id: e.id, type: "remove" as const })),
+        eds,
+      ));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [setNodes, setEdges]);
+
+  const clearCanvas = () => {
+    setNodes([]);
+    setEdges([]);
+  };
+
   const controls = (
     <div className="grid gap-2">
       {palette.map((p) => (
@@ -99,12 +125,21 @@ function Inner() {
           key={p.kind}
           draggable
           onDragStart={(e) => onDragStart(e, p)}
-          className="cursor-grab active:cursor-grabbing select-none border border-border bg-panel-2 rounded-lg px-3 py-2 hover:border-accent/60 transition-colors"
+          className="cursor-grab active:cursor-grabbing select-none border border-border bg-panel-2 rounded-lg px-3 py-2 hover:border-accent/60 hover:translate-x-0.5 transition-all"
         >
           <div className="text-[10px] font-mono uppercase tracking-widest text-accent">{p.sublabel}</div>
           <div className="text-sm">{p.label}</div>
         </div>
       ))}
+      <button
+        onClick={clearCanvas}
+        className="mt-2 px-3 py-2 text-xs font-mono uppercase tracking-wider border border-border rounded-md hover:border-accent/50 hover:text-accent transition-colors"
+      >
+        Clear canvas
+      </button>
+      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/70 pt-1">
+        {nodes.length} node{nodes.length === 1 ? "" : "s"} · {edges.length} edge{edges.length === 1 ? "" : "s"}
+      </p>
     </div>
   );
 
@@ -118,6 +153,7 @@ function Inner() {
       keys={[
         { key: "Drag", label: "Drop from palette to canvas" },
         { key: "Click+Drag", label: "Connect node handles" },
+        { key: "Del", label: "Remove selected nodes/edges" },
       ]}
     >
       <div ref={wrapperRef} className="absolute inset-0">

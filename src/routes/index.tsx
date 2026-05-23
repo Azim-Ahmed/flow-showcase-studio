@@ -69,20 +69,25 @@ function Index() {
       <SiteHeader />
 
       {/* Hero */}
-      <section className="relative grid-bg border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-32 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 border border-accent/30 bg-accent/5 rounded-full mb-6">
+      <section className="relative grid-bg border-b border-border overflow-hidden">
+        <div className="pointer-events-none absolute -top-32 -left-32 size-[420px] rounded-full bg-accent/20 blur-[120px] float-slow" />
+        <div className="pointer-events-none absolute top-20 right-0 size-[360px] rounded-full bg-accent-warm/15 blur-[140px]" />
+        <div className="max-w-6xl mx-auto px-6 md:px-8 py-24 md:py-36 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 border border-accent/30 bg-accent/5 backdrop-blur-sm rounded-full mb-7">
             <span className="size-1.5 bg-accent rounded-full animate-pulse" />
-            <span className="text-[11px] font-mono text-accent uppercase tracking-widest">
+            <span className="text-[10px] font-mono text-accent uppercase tracking-[0.22em]">
               open collection · free for the community
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter leading-[0.95] mb-6 max-w-4xl">
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-tighter leading-[0.95] mb-7 max-w-4xl text-balance">
             Beautiful, interactive
             <br />
-            <span className="text-accent">ReactFlow</span> patterns.
+            <span className="bg-gradient-to-br from-accent via-accent to-accent/60 bg-clip-text text-transparent">
+              ReactFlow
+            </span>{" "}
+            patterns.
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed mb-10">
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed mb-10 text-pretty">
             A growing library of production-ready node-and-edge techniques —
             advanced routing, animated flows, editable curves, and live
             intersection detection. Built to be copied, remixed, and shipped.
@@ -90,17 +95,18 @@ function Index() {
           <div className="flex flex-wrap gap-3">
             <Link
               to="/routing"
-              className="px-5 py-3 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-colors"
+              className="group px-5 py-3 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-all shadow-[0_8px_30px_-8px_color-mix(in_oklab,var(--accent)_70%,transparent)] hover:shadow-[0_10px_40px_-8px_color-mix(in_oklab,var(--accent)_80%,transparent)]"
             >
-              Explore examples →
+              Explore examples
+              <span className="inline-block ml-1 transition-transform group-hover:translate-x-0.5">→</span>
             </Link>
             <a
-              href="https://reactflow.dev"
+              href="https://www.visualflow.dev"
               target="_blank"
               rel="noreferrer"
-              className="px-5 py-3 border border-border bg-panel text-foreground font-medium rounded-md text-sm hover:bg-panel-2 transition-colors"
+              className="px-5 py-3 border border-border bg-panel/60 backdrop-blur text-foreground font-medium rounded-md text-sm hover:bg-panel-2 hover:border-accent/30 transition-colors"
             >
-              ReactFlow docs ↗
+              VisualFlow ↗
             </a>
           </div>
         </div>
@@ -158,7 +164,15 @@ function Index() {
             </span>
           </div>
           <span className="text-xs text-muted-foreground">
-            Crafted for the ReactFlow community · MIT licensed
+            Crafted for the ReactFlow community · MIT licensed · Powered by{" "}
+            <a
+              href="https://www.visualflow.dev"
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent hover:underline"
+            >
+              VisualFlow
+            </a>
           </span>
         </div>
       </footer>

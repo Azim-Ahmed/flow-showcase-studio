@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -124,25 +124,61 @@ function Inner() {
   const [nodes, setNodes, onNodesChange] = useNodesState(layered(seedNodes, seedEdges));
   const [edges, setEdges, onEdgesChange] = useEdgesState(seedEdges);
   const { fitView } = useReactFlow();
+  const [animating, setAnimating] = useState(false);
 
   const onConnect = useCallback(
     (c: Connection) => setEdges((eds) => addEdge(c, eds)),
     [setEdges]
   );
 
+  // Animate node positions toward their target positions over `duration` ms.
+  const animateTo = useCallback(
+    (targets: Map<string, { x: number; y: number }>, duration = 600) => {
+      setAnimating(true);
+      const start = performance.now();
+      const startPos = new Map<string, { x: number; y: number }>();
+      setNodes((nds) => {
+        nds.forEach((n) => startPos.set(n.id, { ...n.position }));
+        return nds;
+      });
+      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+      let raf = 0;
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - start) / duration);
+        const k = ease(t);
+        setNodes((nds) =>
+          nds.map((n) => {
+            const tgt = targets.get(n.id);
+            const src = startPos.get(n.id) ?? n.position;
+            if (!tgt) return n;
+            return { ...n, position: { x: src.x + (tgt.x - src.x) * k, y: src.y + (tgt.y - src.y) * k } };
+          })
+        );
+        if (t < 1) raf = requestAnimationFrame(tick);
+        else {
+          setAnimating(false);
+          fitView({ padding: 0.2, duration: 350 });
+        }
+      };
+      raf = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(raf);
+    },
+    [setNodes, fitView]
+  );
+
   const relayout = useCallback(() => {
-    setNodes((nds) => layered(nds, edges));
-    setTimeout(() => fitView({ padding: 0.2, duration: 400 }), 50);
-  }, [edges, fitView, setNodes]);
+    const laid = layered(seedNodes.map((n) => ({ ...n })), edges);
+    const targets = new Map(laid.map((n) => [n.id, n.position]));
+    animateTo(targets);
+  }, [edges, animateTo]);
 
   const shuffle = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        position: { x: Math.random() * 600, y: Math.random() * 400 },
-      }))
-    );
-  }, [setNodes]);
+    const targets = new Map<string, { x: number; y: number }>();
+    nodes.forEach((n) => {
+      targets.set(n.id, { x: Math.random() * 600, y: Math.random() * 400 });
+    });
+    animateTo(targets, 500);
+  }, [nodes, animateTo]);
 
   const styledEdges = useMemo(
     () =>
@@ -158,16 +194,21 @@ function Inner() {
     <div className="flex flex-col gap-2">
       <button
         onClick={relayout}
-        className="px-4 py-2 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-colors"
+        disabled={animating}
+        className="px-4 py-2 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-colors disabled:opacity-50"
       >
         Auto-arrange →
       </button>
       <button
         onClick={shuffle}
-        className="px-4 py-2 border border-border bg-panel-2 text-foreground rounded-md text-sm hover:bg-panel transition-colors"
+        disabled={animating}
+        className="px-4 py-2 border border-border bg-panel-2 text-foreground rounded-md text-sm hover:bg-panel transition-colors disabled:opacity-50"
       >
         Shuffle positions
       </button>
+      <p className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground/70 pt-1">
+        {animating ? "easing into place…" : "ready"}
+      </p>
     </div>
   );
 
@@ -176,7 +217,7 @@ function Inner() {
       index="06"
       category="Layout"
       title="Hierarchical auto-layout"
-      description="Runs a longest-path layered layout on any graph. Shuffle the nodes then click Auto-arrange to watch them snap into a clean DAG."
+      description="Runs a longest-path layered layout on any graph and tweens the nodes into place with cubic easing. Shuffle then auto-arrange to watch them snap back into a clean DAG."
       controls={controls}
       keys={[
         { key: "Drag", label: "Move nodes manually" },

@@ -321,7 +321,7 @@ function EditablePage() {
 }
 
 function Inner() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const onConnect = useCallback(
@@ -339,12 +339,38 @@ function Inner() {
     [setEdges]
   );
 
+  const straightenAll = () =>
+    setEdges((eds) => eds.map((e) => ({ ...e, data: { ...(e.data ?? {}), points: [] } })));
+
+  const reset = () => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  };
+
+  const controls = (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={straightenAll}
+        className="px-4 py-2 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-colors"
+      >
+        Straighten all edges
+      </button>
+      <button
+        onClick={reset}
+        className="px-4 py-2 border border-border bg-panel-2 text-foreground rounded-md text-sm hover:bg-panel transition-colors"
+      >
+        Reset graph
+      </button>
+    </div>
+  );
+
   return (
     <ExampleLayout
       index="03"
       category="Controls"
       title="Editable & freeform edges"
       description="Click an edge to reveal its waypoint handles. Drag any dot to bend that side of the curve. Double-click a segment (or click the small midpoint dot) to add a new waypoint; double-click a waypoint to remove it. Hold Space while creating a connection to capture a freeform, hand-drawn path."
+      controls={controls}
       keys={[
         { key: "Click edge", label: "Reveal handles" },
         { key: "Drag dot", label: "Reshape that side" },

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -29,8 +29,11 @@ export const Route = createFileRoute("/flow")({
   }),
 });
 
-function ParticleEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd }: EdgeProps) {
+type ParticleEdgeData = { speed?: number };
+
+function ParticleEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, markerEnd, data }: EdgeProps<ParticleEdgeData>) {
   const [path] = getBezierPath({ sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition });
+  const dur = `${(data?.speed ?? 2.4).toFixed(2)}s`;
   return (
     <>
       <BaseEdge id={id} path={path} markerEnd={markerEnd} style={{ stroke: "var(--accent)", strokeWidth: 1.5, opacity: 0.5 }} />
@@ -44,13 +47,13 @@ function ParticleEdge({ id, sourceX, sourceY, targetX, targetY, sourcePosition, 
         style={{ opacity: 0.9 }}
       />
       <circle r="4" fill="var(--accent)" filter="drop-shadow(0 0 6px var(--accent))">
-        <animateMotion dur="2.4s" repeatCount="indefinite" path={path} />
+        <animateMotion dur={dur} repeatCount="indefinite" path={path} />
       </circle>
       <circle r="2.5" fill="var(--accent)" opacity="0.6">
-        <animateMotion dur="2.4s" begin="0.8s" repeatCount="indefinite" path={path} />
+        <animateMotion dur={dur} begin={`-${parseFloat(dur) / 3}s`} repeatCount="indefinite" path={path} />
       </circle>
       <circle r="2" fill="var(--accent)" opacity="0.4">
-        <animateMotion dur="2.4s" begin="1.6s" repeatCount="indefinite" path={path} />
+        <animateMotion dur={dur} begin={`-${(parseFloat(dur) * 2) / 3}s`} repeatCount="indefinite" path={path} />
       </circle>
     </>
   );
@@ -86,10 +89,57 @@ function FlowPage() {
 function Inner() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [speed, setSpeed] = useState(1); // multiplier 0.25–3
 
   const onConnect = useCallback(
     (c: Connection) => setEdges((eds) => addEdge({ ...c, type: "particle" }, eds)),
     [setEdges]
+  );
+
+  // Inject the speed (as duration in seconds) into every edge's data.
+  const dur = 2.4 / speed;
+  const sped = useMemo(
+    () => edges.map((e) => ({ ...e, data: { ...(e.data ?? {}), speed: dur } })),
+    [edges, dur]
+  );
+
+  const controls = (
+    <div className="space-y-3">
+      <label className="block">
+        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">
+          <span>Particle speed</span>
+          <span className="text-accent">{speed.toFixed(2)}×</span>
+        </div>
+        <input
+          type="range"
+          min={0.25}
+          max={3}
+          step={0.05}
+          value={speed}
+          onChange={(e) => setSpeed(parseFloat(e.target.value))}
+          className="w-full accent-[var(--accent)]"
+        />
+      </label>
+      <div className="flex gap-2">
+        {[
+          { l: "0.5×", v: 0.5 },
+          { l: "1×", v: 1 },
+          { l: "2×", v: 2 },
+        ].map((p) => (
+          <button
+            key={p.l}
+            onClick={() => setSpeed(p.v)}
+            className={`flex-1 px-2 py-1.5 text-[11px] font-mono rounded border transition-colors ${
+              Math.abs(speed - p.v) < 0.01
+                ? "border-accent text-accent bg-accent/10"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-accent/40"
+            }`}
+          >
+            {p.l}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 
   return (
@@ -97,15 +147,17 @@ function Inner() {
       index="02"
       category="Motion"
       title="Animated SVG along edges"
-      description="Each edge renders a faded base path, an animated dashed overlay, and three SVG circles tweened along the bezier curve with <animateMotion>. New connections inherit the same effect automatically."
+      description="Each edge renders a faded base path, an animated dashed overlay, and three SVG circles tweened along the bezier curve with <animateMotion>. Adjust the speed slider to throttle every particle in real time."
+      controls={controls}
       keys={[
         { key: "Drag", label: "Pan canvas" },
         { key: "Click", label: "Connect handles" },
+        { key: "Slider", label: "Throttle particle speed" },
       ]}
     >
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={sped}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

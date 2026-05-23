@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
   Background,
   BackgroundVariant,
@@ -65,22 +65,62 @@ function RoutingPage() {
 }
 
 function Inner() {
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [obstacleId, setObstacleId] = useState(0);
 
   const onConnect = useCallback(
     (c: Connection) => setEdges((eds) => addEdge(c, eds)),
     [setEdges]
   );
 
+  const addObstacle = () => {
+    const id = `obs-${obstacleId}`;
+    setObstacleId((n) => n + 1);
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "flow",
+        position: { x: 240 + Math.random() * 600, y: 80 + Math.random() * 220 },
+        data: { label: "Obstacle", sublabel: "Drag me", kind: "active" },
+      },
+    ]);
+  };
+
+  const reset = () => {
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  };
+
   const styledEdges = useMemo(
     () =>
       edges.map((e) => ({
         ...e,
         type: "smart",
-        style: { stroke: "var(--accent)", strokeWidth: 1.75 },
+        style: {
+          stroke: e.selected ? "var(--accent-warm)" : "var(--accent)",
+          strokeWidth: e.selected ? 2.5 : 1.75,
+        },
       })),
     [edges]
+  );
+
+  const controls = (
+    <div className="flex flex-col gap-2">
+      <button
+        onClick={addObstacle}
+        className="px-4 py-2 bg-accent text-canvas font-semibold rounded-md text-sm hover:bg-accent/90 transition-colors"
+      >
+        + Drop obstacle
+      </button>
+      <button
+        onClick={reset}
+        className="px-4 py-2 border border-border bg-panel-2 text-foreground rounded-md text-sm hover:bg-panel transition-colors"
+      >
+        Reset graph
+      </button>
+    </div>
   );
 
   return (
@@ -88,9 +128,11 @@ function Inner() {
       index="01"
       category="Routing"
       title="Smart orthogonal routing"
-      description="Edges run A* on a sparse grid built from the live node bounds — they automatically dodge any node in the way. Drag a node and the edges re-route in real time."
+      description="Edges run A* on a sparse grid built from the live node bounds — they automatically dodge any node in the way. Drop an obstacle and watch the edges find a new path in real time."
+      controls={controls}
       keys={[
         { key: "Drag", label: "Move nodes — edges re-route" },
+        { key: "Click", label: "Highlight an edge" },
         { key: "Scroll", label: "Zoom canvas" },
       ]}
     >
